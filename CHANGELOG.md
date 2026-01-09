@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.8](https://github.com/agntcy/slim-mcp-python/compare/v0.1.7...v0.1.8) (2026-01-09)
+
+
+### Features
+
+* Move slim-mcp from SLIM repo ([#1](https://github.com/agntcy/slim-mcp-python/issues/1)) ([e025bdb](https://github.com/agntcy/slim-mcp-python/commit/e025bdb486d13480300d5c1a8b85a1d60cf44850))
+
 ## [0.1.7](https://github.com/agntcy/slim/compare/slim-mcp-v0.1.6...slim-mcp-v0.1.7) (2025-09-18)
 
 ### Bug Fixes
