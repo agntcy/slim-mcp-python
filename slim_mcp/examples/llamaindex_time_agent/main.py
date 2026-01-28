@@ -2,16 +2,19 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import asyncio
+import json
 import logging
 
 import click
+import slim_bindings
 from dotenv import load_dotenv
 from llama_index.core.agent.workflow import ReActAgent
 from llama_index.llms.azure_openai import AzureOpenAI
 from llama_index.llms.ollama import Ollama
 from llama_index.tools.mcp import McpToolSpec
+from mcp import ClientSession
 
-from slim_mcp import SLIMClient
+from slim_mcp import create_local_app, create_client_streams
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -42,16 +45,24 @@ async def amain(
         raise Exception("LLM type must be azure or ollama")
 
     logger.info("Starting SLIM client")
-    async with SLIMClient(
-        [config],
-        "org",
-        "ns",
-        "time-agent",
-        organization,
-        namespace,
-        mcp_server,
-    ) as client1:
-        async with client1.to_mcp_session() as mcp_session:
+
+    # Create SLIM app
+    client_name = slim_bindings.Name("org", "ns", "time-agent")
+    client_app, connection_id = await create_local_app(client_name, config)
+
+    logger.info("SLIM App created")
+
+    # Set route to destination if we have a connection
+    destination = slim_bindings.Name(organization, namespace, mcp_server)
+    if connection_id is not None:
+        await client_app.set_route_async(destination, connection_id)
+
+    logger.info("SLIM route set")
+
+    # Create MCP client session using standard transport pattern
+    async with create_client_streams(client_app, destination) as (read, write):
+        logger.info("Creating MCP client session")
+        async with ClientSession(read, write) as mcp_session:
             logger.info("Creating MCP tool spec")
 
             await mcp_session.initialize()
@@ -61,6 +72,7 @@ async def amain(
             )
 
             tools = await mcp_tool_spec.to_tool_list_async()
+            print(tools)
 
             agent = ReActAgent(llm=llm, tools=tools)
 
@@ -71,18 +83,58 @@ async def amain(
             print(response)
 
 
-class DictParamType(click.ParamType):
-    name = "dict"
+class ClientConfigType(click.ParamType):
+    """Custom click parameter type for parsing JSON and converting to ClientConfig."""
+
+    name = "clientconfig"
 
     def convert(self, value, param, ctx):
-        import json
-
+        # Handle default dict value
         if isinstance(value, dict):
-            return value  # Already a dict (for default value)
-        try:
-            return json.loads(value)
-        except json.JSONDecodeError:
-            self.fail(f"{value} is not valid JSON", param, ctx)
+            json_data = value
+        else:
+            try:
+                json_data = json.loads(value)
+            except json.JSONDecodeError:
+                self.fail(f"{value} is not valid JSON", param, ctx)
+
+        # If only endpoint is provided and tls.insecure is True, use the helper
+        if (
+            "endpoint" in json_data
+            and "tls" in json_data
+            and json_data["tls"].get("insecure", False)
+            and len(json_data) == 2
+            and len(json_data["tls"]) == 1
+        ):
+            return slim_bindings.new_insecure_client_config(json_data["endpoint"])
+
+        # Otherwise, build the config manually
+        # Start with insecure config as base
+        config = slim_bindings.new_insecure_client_config(json_data["endpoint"])
+
+        # Override TLS settings if provided
+        if "tls" in json_data:
+            tls_data = json_data["tls"]
+            config.tls = slim_bindings.TlsClientConfig(
+                insecure=tls_data.get("insecure", False),
+                insecure_skip_verify=tls_data.get("insecure_skip_verify", False),
+                source=slim_bindings.TlsSource.NONE(),
+                ca_source=slim_bindings.CaSource.NONE(),
+                include_system_ca_certs_pool=True,
+                tls_version="tls1.3",
+            )
+
+        # Set optional fields
+        if "origin" in json_data:
+            config.origin = json_data["origin"]
+        if "server_name" in json_data:
+            config.server_name = json_data["server_name"]
+        if "compression" in json_data:
+            config.compression = slim_bindings.CompressionType[json_data["compression"]]
+        if "rate_limit" in json_data:
+            config.rate_limit = json_data["rate_limit"]
+
+        return config
 
 
 @click.command(context_settings={"auto_envvar_prefix": "TIME_AGENT"})
@@ -101,7 +153,8 @@ class DictParamType(click.ParamType):
             "insecure": True,
         },
     },
-    type=DictParamType(),
+    type=ClientConfigType(),
+    help="slim server configuration",
 )
 def main(
     llm_type,
