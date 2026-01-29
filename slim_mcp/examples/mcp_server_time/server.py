@@ -21,6 +21,7 @@ from mcp.shared.exceptions import McpError
 from pydantic import BaseModel
 
 from slim_mcp import create_local_app, run_mcp_server
+from slim_mcp.examples.click_types import ClientConfigType
 
 logger = logging.getLogger(__name__)
 
@@ -383,60 +384,6 @@ def serve_sse(
     import uvicorn
 
     uvicorn.run(starlette_app, host="0.0.0.0", port=port)
-
-
-class ClientConfigType(click.ParamType):
-    """Custom click parameter type for parsing JSON and converting to ClientConfig."""
-
-    name = "clientconfig"
-
-    def convert(self, value, param, ctx):
-        # Handle default dict value
-        if isinstance(value, dict):
-            json_data = value
-        else:
-            try:
-                json_data = json.loads(value)
-            except json.JSONDecodeError:
-                self.fail(f"{value} is not valid JSON", param, ctx)
-
-        # If only endpoint is provided and tls.insecure is True, use the helper
-        if (
-            "endpoint" in json_data
-            and "tls" in json_data
-            and json_data["tls"].get("insecure", False)
-            and len(json_data) == 2
-            and len(json_data["tls"]) == 1
-        ):
-            return slim_bindings.new_insecure_client_config(json_data["endpoint"])
-
-        # Otherwise, build the config manually
-        # Start with insecure config as base
-        config = slim_bindings.new_insecure_client_config(json_data["endpoint"])
-
-        # Override TLS settings if provided
-        if "tls" in json_data:
-            tls_data = json_data["tls"]
-            config.tls = slim_bindings.TlsClientConfig(
-                insecure=tls_data.get("insecure", False),
-                insecure_skip_verify=tls_data.get("insecure_skip_verify", False),
-                source=slim_bindings.TlsSource.NONE(),
-                ca_source=slim_bindings.CaSource.NONE(),
-                include_system_ca_certs_pool=True,
-                tls_version="tls1.3",
-            )
-
-        # Set optional fields
-        if "origin" in json_data:
-            config.origin = json_data["origin"]
-        if "server_name" in json_data:
-            config.server_name = json_data["server_name"]
-        if "compression" in json_data:
-            config.compression = slim_bindings.CompressionType[json_data["compression"]]
-        if "rate_limit" in json_data:
-            config.rate_limit = json_data["rate_limit"]
-
-        return config
 
 
 @click.command(context_settings={"auto_envvar_prefix": "MCP_TIME_SERVER"})
