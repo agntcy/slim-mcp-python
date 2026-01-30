@@ -5,13 +5,16 @@ import asyncio
 import logging
 
 import click
+import slim_bindings
 from dotenv import load_dotenv
 from llama_index.core.agent.workflow import ReActAgent
 from llama_index.llms.azure_openai import AzureOpenAI
 from llama_index.llms.ollama import Ollama
 from llama_index.tools.mcp import McpToolSpec
+from mcp import ClientSession
 
-from slim_mcp import SLIMClient
+from slim_mcp import create_local_app, create_client_streams
+from slim_mcp.examples.click_types import ClientConfigType
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -42,16 +45,24 @@ async def amain(
         raise Exception("LLM type must be azure or ollama")
 
     logger.info("Starting SLIM client")
-    async with SLIMClient(
-        [config],
-        "org",
-        "ns",
-        "time-agent",
-        organization,
-        namespace,
-        mcp_server,
-    ) as client1:
-        async with client1.to_mcp_session() as mcp_session:
+
+    # Create SLIM app
+    client_name = slim_bindings.Name("org", "ns", "time-agent")
+    client_app, connection_id = await create_local_app(client_name, config)
+
+    logger.info("SLIM App created")
+
+    # Set route to destination if we have a connection
+    destination = slim_bindings.Name(organization, namespace, mcp_server)
+    if connection_id is not None:
+        await client_app.set_route_async(destination, connection_id)
+
+    logger.info("SLIM route set")
+
+    # Create MCP client session using standard transport pattern
+    async with create_client_streams(client_app, destination) as (read, write):
+        logger.info("Creating MCP client session")
+        async with ClientSession(read, write) as mcp_session:
             logger.info("Creating MCP tool spec")
 
             await mcp_session.initialize()
@@ -61,6 +72,7 @@ async def amain(
             )
 
             tools = await mcp_tool_spec.to_tool_list_async()
+            print(tools)
 
             agent = ReActAgent(llm=llm, tools=tools)
 
@@ -69,20 +81,6 @@ async def amain(
             )
 
             print(response)
-
-
-class DictParamType(click.ParamType):
-    name = "dict"
-
-    def convert(self, value, param, ctx):
-        import json
-
-        if isinstance(value, dict):
-            return value  # Already a dict (for default value)
-        try:
-            return json.loads(value)
-        except json.JSONDecodeError:
-            self.fail(f"{value} is not valid JSON", param, ctx)
 
 
 @click.command(context_settings={"auto_envvar_prefix": "TIME_AGENT"})
@@ -101,7 +99,8 @@ class DictParamType(click.ParamType):
             "insecure": True,
         },
     },
-    type=DictParamType(),
+    type=ClientConfigType(),
+    help="slim server configuration",
 )
 def main(
     llm_type,

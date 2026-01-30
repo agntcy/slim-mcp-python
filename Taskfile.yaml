@@ -29,7 +29,7 @@ tasks:
   test:
     desc: "Run pytest test suite with optional test path specification"
     cmds:
-      - uv run {{.UV_ARGS}} pytest -s {{.TESTS}}
+      - uv run {{.UV_ARGS}} pytest -s --forked {{.TESTS | default "tests/"}}
 
   packaging:
     desc: "Build Python package and generate distribution artifacts"

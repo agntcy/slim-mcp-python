@@ -6,7 +6,6 @@ MCP Time Server - A server implementation for time and timezone conversion funct
 This module provides tools for getting current time in different timezones and converting times between timezones.
 """
 
-import asyncio
 import json
 import logging
 from collections.abc import Sequence
@@ -15,15 +14,15 @@ from enum import Enum
 from zoneinfo import ZoneInfo
 
 import click
+import slim_bindings
 from mcp import types
 from mcp.server.lowlevel import Server
 from mcp.shared.exceptions import McpError
 from pydantic import BaseModel
 
-from slim_mcp import SLIMServer, init_tracing
+from slim_mcp import create_local_app, run_mcp_server
+from slim_mcp.examples.click_types import ClientConfigType
 
-# Configure logging
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
@@ -314,48 +313,13 @@ class TimeServerApp:
             except Exception as e:
                 raise ValueError(f"Error processing mcp-server-time query: {str(e)}")
 
-    async def handle_session(self, slim_server, session):
-        """
-        Handle a single session with proper error handling and logging.
-
-        Args:
-            session: The session to handle
-            slim_server: The SLIM server instance
-            tasks: Set of active tasks
-        """
-        async with slim_server.new_streams(session) as streams:
-            await self.app.run(
-                streams[0],
-                streams[1],
-                self.app.create_initialization_options(),
-            )
-
-
-async def cleanup_tasks(tasks):
-    """
-    Clean up all tasks and wait for their completion.
-
-    Args:
-        tasks: Set of tasks to clean up
-    """
-    for task in tasks:
-        if not task.done():
-            task.cancel()
-
-    if tasks:
-        try:
-            await asyncio.gather(*tasks, return_exceptions=True)
-        except Exception:
-            logger.error("Error during task cleanup", exc_info=True)
-            raise
-
 
 async def serve_slim(
     local_timezone: str | None = None,
     organization: str = "org",
     namespace: str = "ns",
     mcp_server: str = "time-server",
-    config: dict = {},
+    config: slim_bindings.ClientConfig | None = None,
 ) -> None:
     """
     Main server function that initializes and runs the time server using SLIM transport.
@@ -365,42 +329,19 @@ async def serve_slim(
         organization: Organization name
         namespace: Namespace name
         mcp_server: MCP server name
-        config: Server configuration dictionary
+        config: Server configuration (ClientConfig object or None)
     """
-    await init_tracing({"log_level": "info"})
-    time_app = TimeServerApp(local_timezone)
-    tasks: set[asyncio.Task] = set()
+    # Create MCP app
+    time_app = TimeServerApp(local_timezone).app
 
-    async with SLIMServer([config], organization, namespace, mcp_server) as slim_server:
-        try:
-            async for new_session in slim_server:
-                # Copy session ID from session as it not available after the session closes.
-                session_id = new_session.id
-                logger.info(
-                    f"new session started - session_id: {session_id}, active_sessions: {len(tasks) + 1}"
-                )
-                task = asyncio.create_task(
-                    time_app.handle_session(slim_server, new_session)
-                )
-                tasks.add(task)
+    # Create SLIM app
+    server_name = slim_bindings.Name(organization, namespace, mcp_server)
+    slim_app, connection_id = await create_local_app(server_name, config)
 
-                def on_session_end(task: asyncio.Task):
-                    try:
-                        task.exception()  # Check for exceptions
-                    except Exception as e:
-                        logger.error(
-                            f"Error handling session {session_id}: {str(e)}",
-                            extra={"session_id": session_id},
-                            exc_info=True,
-                        )
-                    tasks.discard(task)
-                    logger.info(
-                        f"session ended - {session_id}, active_sessions: {len(tasks)}"
-                    )
+    logger.info(f"Starting time server: {slim_app.id()}")
 
-                task.add_done_callback(on_session_end)
-        finally:
-            await cleanup_tasks(tasks)
+    # Run the MCP server
+    await run_mcp_server(slim_app, time_app)
 
 
 def serve_sse(
@@ -445,20 +386,6 @@ def serve_sse(
     uvicorn.run(starlette_app, host="0.0.0.0", port=port)
 
 
-class DictParamType(click.ParamType):
-    name = "dict"
-
-    def convert(self, value, param, ctx):
-        import json
-
-        if isinstance(value, dict):
-            return value  # Already a dict (for default value)
-        try:
-            return json.loads(value)
-        except json.JSONDecodeError:
-            self.fail(f"{value} is not valid JSON", param, ctx)
-
-
 @click.command(context_settings={"auto_envvar_prefix": "MCP_TIME_SERVER"})
 @click.option(
     "--local-timezone", type=str, help="Override local timezone", default=None
@@ -491,13 +418,17 @@ class DictParamType(click.ParamType):
             "insecure": True,
         },
     },
-    type=DictParamType(),
+    type=ClientConfigType(),
     help="slim server configuration, used only with slim transport",
 )
 def main(local_timezone, transport, port, organization, namespace, mcp_server, config):
     """
     MCP Time Server - Time and timezone conversion functionality for MCP.
     """
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    )
 
     if transport == "slim":
         import asyncio

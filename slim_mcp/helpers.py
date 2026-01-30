@@ -1,123 +1,116 @@
 # Copyright AGNTCY Contributors (https://github.com/agntcy)
 # SPDX-License-Identifier: Apache-2.0
 
-import base64
-import json
+"""
+Core helper functions for creating SLIM apps and services.
+"""
+
 import logging
-from typing import Tuple
 
 import slim_bindings
 
 logger = logging.getLogger(__name__)
 
 
-# Create a shared secret identity provider and verifier
-# This is used for shared secret authentication
-# Takes an identity and a shared secret as parameters
-# Returns a tuple of (provider, verifier)
-# This is used for shared secret authentication
-def shared_secret_identity(
-    identity: str, secret: str
-) -> Tuple[slim_bindings.IdentityProvider, slim_bindings.IdentityVerifier]:
+def setup_service(enable_opentelemetry: bool = False) -> slim_bindings.Service:
     """
-    Create a provider and verifier using a shared secret.
+    Initialize and configure the SLIM service.
+
+    Args:
+        enable_opentelemetry: Whether to enable OpenTelemetry tracing
+
+    Returns:
+        slim_bindings.Service: The configured global service instance
+
+    Note:
+        This function initializes the global SLIM service with default configurations.
+        For full OpenTelemetry support, set OTEL environment variables.
     """
-    provider = slim_bindings.IdentityProvider.SharedSecret(
-        identity=identity, shared_secret=secret
-    )
-    verifier = slim_bindings.IdentityVerifier.SharedSecret(
-        identity=identity, shared_secret=secret
-    )
+    # Initialize tracing and global state
+    tracing_config = slim_bindings.new_tracing_config()
+    runtime_config = slim_bindings.new_runtime_config()
+    service_config = slim_bindings.new_service_config()
 
-    return provider, verifier
+    tracing_config.log_level = "info"
 
+    if enable_opentelemetry:
+        # Note: OpenTelemetry configuration through config objects is complex
+        # For now, we'll just initialize with default tracing
+        # Users can set OTEL environment variables for full OTEL support
+        pass
 
-# Create a JWT identity provider and verifier
-# This is used for JWT authentication
-# Takes private key path, public key path, and algorithm as parameters
-# Returns a Slim object with the provider and verifier
-def jwt_identity(
-    jwt_path: str,
-    jwk_path: str,
-    iss: str | None = None,
-    sub: str | None = None,
-    aud: list | None = None,
-) -> Tuple[slim_bindings.IdentityProvider, slim_bindings.IdentityVerifier]:
-    """
-    Parse the JWK and JWT from the provided strings.
-    """
-
-    print(f"Using JWk file: {jwk_path}")
-
-    with open(jwk_path) as jwk_file:
-        jwk_string = jwk_file.read()
-
-    # The JWK is normally encoded as base64, so we need to decode it
-    spire_jwks = json.loads(jwk_string)
-
-    for _, v in spire_jwks.items():
-        # Decode first item from base64
-        spire_jwks = base64.b64decode(v)
-        break
-
-    provider = slim_bindings.IdentityProvider.StaticJwt(
-        path=jwt_path,
+    slim_bindings.initialize_with_configs(
+        tracing_config=tracing_config,
+        runtime_config=runtime_config,
+        service_config=[service_config],
     )
 
-    pykey = slim_bindings.Key(
-        algorithm=slim_bindings.Algorithm.RS256,
-        format=slim_bindings.KeyFormat.Jwks,
-        key=slim_bindings.KeyData.Content(content=spire_jwks.decode("utf-8")),
-    )
+    # Get the global service instance
+    service = slim_bindings.get_global_service()
 
-    verifier = slim_bindings.IdentityVerifier.Jwt(
-        public_key=pykey,
-        issuer=iss,
-        audience=aud,
-        subject=sub,
-    )
-
-    return provider, verifier
+    return service
 
 
 async def create_local_app(
     local_name: slim_bindings.Name,
-    slim_client_configs: list[dict],
+    slim_client_config: slim_bindings.ClientConfig | None = None,
     enable_opentelemetry: bool = False,
-    shared_secret: str = "",
-) -> slim_bindings.Slim:
-    # init tracing
-    slim_bindings.init_tracing(
-        {
-            "log_level": "info",
-            "opentelemetry": {
-                "enabled": enable_opentelemetry,
-                "grpc": {
-                    "endpoint": "http://localhost:4317",
-                },
-            },
-        }
-    )
+    shared_secret: str = "secretsecretsecretsecretsecretsecret",
+) -> tuple[slim_bindings.App, int | None]:
+    """
+    Create a local SLIM app and optionally connect to an upstream server.
 
-    provider, verifier = shared_secret_identity(
-        identity=str(local_name),
-        secret=shared_secret,
-    )
+    Args:
+        local_name: The name of the local app
+        slim_client_config: Optional client configuration for connecting to upstream server
+        enable_opentelemetry: Whether to enable OpenTelemetry
+        shared_secret: Shared secret for authentication (must be at least 32 characters)
 
-    local_app = slim_bindings.Slim(local_name, provider, verifier)
+    Returns:
+        tuple: (App instance, connection ID or None if no connection was made)
 
-    logger.info(f"{local_app.id_str} Created app")
+    Example:
+        ```python
+        import slim_bindings
+        from slim_mcp import create_local_app
 
-    # Connect to slim server
-    for config in slim_client_configs:
-        logger.info(f"config: {config}")
+        # Create local app without upstream connection
+        name = slim_bindings.Name("org", "ns", "my-app")
+        app, conn_id = await create_local_app(name)
+
+        # Create app with upstream connection
+        config = slim_bindings.new_insecure_client_config("http://localhost:46357")
+        app, conn_id = await create_local_app(name, config)
+
+        # Use connection ID to set routes
+        if conn_id is not None:
+            destination = slim_bindings.Name("org", "ns", "target")
+            await app.set_route_async(destination, conn_id)
+        ```
+    """
+    service = setup_service(enable_opentelemetry=enable_opentelemetry)
+
+    connection_id = None
+    # Connect service to upstream server if config provided
+    if slim_client_config is not None:
+        logger.info(f"config: {slim_client_config}")
         try:
-            _ = await local_app.connect(config)
+            connection_id = await service.connect_async(slim_client_config)
         except Exception as e:
             # Ignore "client already connected" errors
             if "client already connected" not in str(e):
                 raise
 
-        logger.info(f"{local_app.id_str} Connected to {config['endpoint']}")
+        logger.info(
+            f"Connected to {slim_client_config.endpoint} with connection_id: {connection_id}"
+        )
 
-    return local_app
+    # Create local app with shared secret
+    local_app = service.create_app_with_secret(local_name, shared_secret)
+    logger.info(f"{local_app.id()} Created app")
+
+    # Subscribe app to upstream server if connected
+    if connection_id is not None:
+        await local_app.subscribe_async(local_name, connection_id)
+
+    return local_app, connection_id
