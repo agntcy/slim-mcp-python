@@ -52,7 +52,7 @@ async def create_mcp_streams(session: slim_bindings.Session):
                     received_msg = await session.get_message_async(timeout=None)
                     logger.debug(
                         "Received message",
-                        extra={"message": received_msg.payload.decode()},
+                        extra={"payload": received_msg.payload.decode()},
                     )
 
                     message = types.JSONRPCMessage.model_validate_json(
