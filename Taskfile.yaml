@@ -29,14 +29,7 @@ tasks:
   test:
     desc: "Run pytest test suite with optional test path specification"
     cmds:
-      # Run tests individually in separate processes to isolate global SLIM service state
-      - |
-        if [ -n "{{.TESTS}}" ]; then
-          uv run {{.UV_ARGS}} pytest -s {{.TESTS}}
-        else
-          uv run {{.UV_ARGS}} pytest -s tests/test_client_server.py::test_mcp_client_server_connection || exit 1
-          uv run {{.UV_ARGS}} pytest -s tests/test_client_server.py::test_mcp_client_server_reconnection || exit 1
-        fi
+      - uv run {{.UV_ARGS}} pytest -s --forked {{.TESTS | default "tests/"}}
 
   packaging:
     desc: "Build Python package and generate distribution artifacts"
