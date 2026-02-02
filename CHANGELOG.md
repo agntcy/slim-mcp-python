@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.2.0](https://github.com/agntcy/slim-mcp-python/compare/v0.1.8...v0.2.0) (2026-02-02)
+
+
+### ⚠ BREAKING CHANGES
+
+* Move to slim_bindings v1.0.0 and refactor ([#5](https://github.com/agntcy/slim-mcp-python/issues/5))
+
+### Features
+
+* Move to slim_bindings v1.0.0 and refactor ([#5](https://github.com/agntcy/slim-mcp-python/issues/5)) ([3e5fb13](https://github.com/agntcy/slim-mcp-python/commit/3e5fb13a4a53e639ea9e1cec19905bb34dfa485d))
+
 ## [0.1.8](https://github.com/agntcy/slim-mcp-python/compare/v0.1.7...v0.1.8) (2026-01-09)
 
 
