@@ -13,6 +13,7 @@ from contextlib import asynccontextmanager
 
 import slim_bindings
 import mcp.types as types
+from mcp.shared.message import SessionMessage
 from slim_bindings.slim_bindings import SessionConfig, SessionType
 from anyio.streams.memory import MemoryObjectReceiveStream, MemoryObjectSendStream
 import anyio
@@ -79,11 +80,11 @@ async def create_mcp_streams(session: slim_bindings.Session):
         tuple: (read_stream, write_stream) for MCP communication
     """
     # Initialize streams
-    read_stream: MemoryObjectReceiveStream[types.JSONRPCMessage | Exception]
-    read_stream_writer: MemoryObjectSendStream[types.JSONRPCMessage | Exception]
+    read_stream: MemoryObjectReceiveStream[SessionMessage | Exception]
+    read_stream_writer: MemoryObjectSendStream[SessionMessage | Exception]
 
-    write_stream: MemoryObjectSendStream[types.JSONRPCMessage]
-    write_stream_reader: MemoryObjectReceiveStream[types.JSONRPCMessage]
+    write_stream: MemoryObjectSendStream[SessionMessage]
+    write_stream_reader: MemoryObjectReceiveStream[SessionMessage]
 
     read_stream_writer, read_stream = anyio.create_memory_object_stream(0)
     write_stream, write_stream_reader = anyio.create_memory_object_stream(0)
@@ -104,7 +105,8 @@ async def create_mcp_streams(session: slim_bindings.Session):
                     message = types.JSONRPCMessage.model_validate_json(
                         received_msg.payload.decode()
                     )
-                    await read_stream_writer.send(message)
+                    session_message = SessionMessage(message=message)
+                    await read_stream_writer.send(session_message)
                 except Exception as exc:
                     if "session channel closed" in str(exc):
                         raise TerminateTaskGroup()
@@ -119,7 +121,9 @@ async def create_mcp_streams(session: slim_bindings.Session):
         try:
             async for message in write_stream_reader:
                 try:
-                    json_str = message.model_dump_json(by_alias=True, exclude_none=True)
+                    json_str = message.message.model_dump_json(
+                        by_alias=True, exclude_none=True
+                    )
                     logger.debug("Sending message", extra={"mcp_message": json_str})
                     completion = await session.publish_async(
                         json_str.encode(), payload_type=None, metadata=None
