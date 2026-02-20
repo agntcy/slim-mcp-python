@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.1](https://github.com/agntcy/slim-mcp-python/compare/v0.2.0...v0.2.1) (2026-02-20)
+
+
+### Features
+
+* update mcp to 1.26.0 ([#10](https://github.com/agntcy/slim-mcp-python/issues/10)) ([997e110](https://github.com/agntcy/slim-mcp-python/commit/997e11059f42066833c8277a303eb12751710c33))
+
 ## [0.2.0](https://github.com/agntcy/slim-mcp-python/compare/v0.1.8...v0.2.0) (2026-02-02)
 
 
