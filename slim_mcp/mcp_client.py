@@ -14,7 +14,6 @@ from contextlib import asynccontextmanager
 import slim_bindings
 import mcp.types as types
 from mcp.shared.message import SessionMessage
-from slim_bindings.slim_bindings import SessionConfig, SessionType
 from anyio.streams.memory import MemoryObjectReceiveStream, MemoryObjectSendStream
 import anyio
 import asyncio
@@ -43,8 +42,8 @@ async def create_slim_session(
     """
     # Create session
     session_with_completion = await slim_app.create_session_async(
-        config=SessionConfig(
-            session_type=SessionType.POINT_TO_POINT,
+        config=slim_bindings.SessionConfig(
+            session_type=slim_bindings.SessionType.POINT_TO_POINT,
             enable_mls=False,
             max_retries=max_retries,
             interval=timeout,
