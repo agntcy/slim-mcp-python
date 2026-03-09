@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.2](https://github.com/agntcy/slim-mcp-python/compare/v0.2.1...v0.2.2) (2026-03-09)
+
+
+### Bug Fixes
+
+* update slim-bindings version to 1.1.1 and change importing ([#12](https://github.com/agntcy/slim-mcp-python/issues/12)) ([37aa448](https://github.com/agntcy/slim-mcp-python/commit/37aa44853dcd04d5147322d77952d6b807ae288e))
+
 ## [0.2.1](https://github.com/agntcy/slim-mcp-python/compare/v0.2.0...v0.2.1) (2026-02-20)
 
 
