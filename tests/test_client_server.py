@@ -21,6 +21,7 @@ TEST_ORG = "org"
 TEST_NS = "default"
 TEST_MCP_SERVER = "mcp1"
 TEST_CLIENT_ID = "client1"
+TEST_SHARED_SECRET = "testsecrettestsecrettestsecrettestsecret"
 
 
 @pytest.fixture
@@ -59,11 +60,15 @@ async def test_mcp_client_server_connection(mcp_app):
     """Test basic MCP client-server connection and initialization."""
     # Create server app
     server_name = slim_bindings.Name(TEST_ORG, TEST_NS, TEST_MCP_SERVER)
-    server_app, _ = await create_local_app(server_name)
+    server_app, _ = await create_local_app(
+        server_name, shared_secret=TEST_SHARED_SECRET
+    )
 
     # Create client app
     client_name = slim_bindings.Name(TEST_ORG, TEST_NS, TEST_CLIENT_ID)
-    client_app, _ = await create_local_app(client_name)
+    client_app, _ = await create_local_app(
+        client_name, shared_secret=TEST_SHARED_SECRET
+    )
 
     # Start MCP server in background
     server_task = asyncio.create_task(run_mcp_server(server_app, mcp_app))
@@ -103,7 +108,9 @@ async def test_mcp_client_server_reconnection(mcp_app):
 
     # Create server app
     server_name = slim_bindings.Name(TEST_ORG, TEST_NS, TEST_MCP_SERVER)
-    server_app, _ = await create_local_app(server_name)
+    server_app, _ = await create_local_app(
+        server_name, shared_secret=TEST_SHARED_SECRET
+    )
 
     # Start MCP server in background
     server_task = asyncio.create_task(run_mcp_server(server_app, mcp_app))
@@ -116,7 +123,9 @@ async def test_mcp_client_server_reconnection(mcp_app):
 
         # First connection
         client_name1 = slim_bindings.Name(TEST_ORG, TEST_NS, TEST_CLIENT_ID)
-        client_app1, _ = await create_local_app(client_name1)
+        client_app1, _ = await create_local_app(
+            client_name1, shared_secret=TEST_SHARED_SECRET
+        )
 
         async with create_client_streams(client_app1, destination) as (read, write):
             async with ClientSession(read, write) as session:
@@ -132,7 +141,9 @@ async def test_mcp_client_server_reconnection(mcp_app):
 
         # Second connection with same client ID
         client_name2 = slim_bindings.Name(TEST_ORG, TEST_NS, TEST_CLIENT_ID)
-        client_app2, _ = await create_local_app(client_name2)
+        client_app2, _ = await create_local_app(
+            client_name2, shared_secret=TEST_SHARED_SECRET
+        )
 
         async with create_client_streams(client_app2, destination) as (read, write):
             async with ClientSession(read, write) as session:
@@ -149,9 +160,15 @@ async def test_mcp_client_server_reconnection(mcp_app):
         client_name4 = slim_bindings.Name(TEST_ORG, TEST_NS, f"{TEST_CLIENT_ID}_4")
         client_name5 = slim_bindings.Name(TEST_ORG, TEST_NS, f"{TEST_CLIENT_ID}_5")
 
-        client_app3, _ = await create_local_app(client_name3)
-        client_app4, _ = await create_local_app(client_name4)
-        client_app5, _ = await create_local_app(client_name5)
+        client_app3, _ = await create_local_app(
+            client_name3, shared_secret=TEST_SHARED_SECRET
+        )
+        client_app4, _ = await create_local_app(
+            client_name4, shared_secret=TEST_SHARED_SECRET
+        )
+        client_app5, _ = await create_local_app(
+            client_name5, shared_secret=TEST_SHARED_SECRET
+        )
 
         async with (
             create_client_streams(client_app3, destination) as (read1, write1),
