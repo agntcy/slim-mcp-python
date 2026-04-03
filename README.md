@@ -53,7 +53,7 @@ async def list_tools() -> list[types.Tool]:
 async def main():
     # Create SLIM app
     name = slim_bindings.Name("org", "namespace", "server-name")
-    slim_app, _ = await create_local_app(name)
+    slim_app, _ = await create_local_app(name, shared_secret="your-secret-here")
 
     # Run MCP server
     await run_mcp_server(slim_app, mcp_app)
@@ -72,7 +72,7 @@ from slim_mcp import create_local_app, create_client_streams
 async def main():
     # Create SLIM app
     client_name = slim_bindings.Name("org", "namespace", "client-id")
-    client_app, _ = await create_local_app(client_name)
+    client_app, _ = await create_local_app(client_name, shared_secret="your-secret-here")
 
     # Connect to server using standard MCP transport pattern
     destination = slim_bindings.Name("org", "namespace", "server-name")
@@ -102,7 +102,7 @@ async def main():
     # Create SLIM app with upstream connection
     client_name = slim_bindings.Name("org", "namespace", "client-id")
     config = slim_bindings.new_insecure_client_config("http://127.0.0.1:46357")
-    client_app, connection_id = await create_local_app(client_name, config)
+    client_app, connection_id = await create_local_app(client_name, config, shared_secret="your-secret-here")
 
     # Set route to destination through upstream connection
     destination = slim_bindings.Name("org", "namespace", "server-name")
@@ -123,27 +123,45 @@ asyncio.run(main())
 
 ### Core Functions
 
-#### `create_local_app(name, config=None, enable_opentelemetry=False, shared_secret=...)`
+#### `create_local_app(name, config=None, enable_opentelemetry=False, shared_secret=None, spire_socket_path=None, spire_target_spiffe_id=None, spire_jwt_audiences=None)`
 
 Create a local SLIM app and optionally connect to an upstream server.
+
+Authentication mode is determined by:
+1. SPIRE — when `spire_socket_path` is provided
+2. Shared secret — when `shared_secret` is provided
+
+**At least one authentication method must be provided.**
 
 **Parameters:**
 - `name` (slim_bindings.Name): The name of the local app
 - `config` (slim_bindings.ClientConfig | None): Optional upstream server configuration
 - `enable_opentelemetry` (bool): Enable OpenTelemetry tracing
-- `shared_secret` (str): Shared secret for authentication (min 32 characters)
+- `shared_secret` (str | None): Shared secret for authentication (None by default)
+- `spire_socket_path` (str | None): Path to SPIRE Workload API socket (enables SPIRE auth)
+- `spire_target_spiffe_id` (str | None): Specific SPIFFE ID to request (optional)
+- `spire_jwt_audiences` (list[str] | None): Audience list for JWT SVID requests (optional)
 
 **Returns:** `tuple[slim_bindings.App, int | None]` - The app and optional connection ID
 
-**Example:**
+**Raises:** `ValueError` if neither `shared_secret` nor `spire_socket_path` is provided
+
+**Examples:**
 ```python
-# Local app without upstream
+# Local app with shared secret
 name = slim_bindings.Name("org", "ns", "my-app")
-app, _ = await create_local_app(name)
+app, _ = await create_local_app(name, shared_secret="mysecret")
+
+# App with SPIRE authentication
+app, _ = await create_local_app(
+    name,
+    spire_socket_path="/run/spire/sockets/agent.sock",
+    spire_jwt_audiences=["my-audience"]
+)
 
 # App with upstream connection
 config = slim_bindings.new_insecure_client_config("http://localhost:46357")
-app, conn_id = await create_local_app(name, config)
+app, conn_id = await create_local_app(name, config, shared_secret="mysecret")
 ```
 
 ### Server Functions
@@ -172,7 +190,7 @@ async def list_tools():
 
 # Create and run
 name = slim_bindings.Name("org", "ns", "my-server")
-slim_app, _ = await create_local_app(name)
+slim_app, _ = await create_local_app(name, shared_secret="your-secret-here")
 await run_mcp_server(slim_app, mcp_app)
 ```
 
@@ -197,7 +215,7 @@ import slim_bindings
 from slim_mcp import create_local_app, create_client_streams
 
 name = slim_bindings.Name("org", "ns", "client")
-client_app, _ = await create_local_app(name)
+client_app, _ = await create_local_app(name, shared_secret="your-secret-here")
 
 destination = slim_bindings.Name("org", "ns", "server")
 async with create_client_streams(client_app, destination) as (read, write):

@@ -320,6 +320,7 @@ async def serve_slim(
     namespace: str = "ns",
     mcp_server: str = "time-server",
     config: slim_bindings.ClientConfig | None = None,
+    shared_secret: str | None = None,
 ) -> None:
     """
     Main server function that initializes and runs the time server using SLIM transport.
@@ -330,13 +331,18 @@ async def serve_slim(
         namespace: Namespace name
         mcp_server: MCP server name
         config: Server configuration (ClientConfig object or None)
+        shared_secret: Shared secret for authentication
     """
     # Create MCP app
     time_app = TimeServerApp(local_timezone).app
 
     # Create SLIM app
     server_name = slim_bindings.Name(organization, namespace, mcp_server)
-    slim_app, connection_id = await create_local_app(server_name, config)
+    slim_app, connection_id = await create_local_app(
+        server_name,
+        config,
+        shared_secret=shared_secret,
+    )
 
     logger.info(f"Starting time server: {slim_app.id()}")
 
@@ -421,7 +427,21 @@ def serve_sse(
     type=ClientConfigType(),
     help="slim server configuration, used only with slim transport",
 )
-def main(local_timezone, transport, port, organization, namespace, mcp_server, config):
+@click.option(
+    "--shared-secret",
+    default=None,
+    help="shared secret for authentication (used only with slim transport)",
+)
+def main(
+    local_timezone,
+    transport,
+    port,
+    organization,
+    namespace,
+    mcp_server,
+    config,
+    shared_secret,
+):
     """
     MCP Time Server - Time and timezone conversion functionality for MCP.
     """
@@ -434,7 +454,14 @@ def main(local_timezone, transport, port, organization, namespace, mcp_server, c
         import asyncio
 
         asyncio.run(
-            serve_slim(local_timezone, organization, namespace, mcp_server, config)
+            serve_slim(
+                local_timezone,
+                organization,
+                namespace,
+                mcp_server,
+                config,
+                shared_secret,
+            )
         )
     else:
         serve_sse(local_timezone, port)

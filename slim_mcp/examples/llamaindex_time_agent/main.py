@@ -24,7 +24,15 @@ load_dotenv()
 
 
 async def amain(
-    llm_type, llm_endpoint, llm_key, organization, namespace, mcp_server, city, config
+    llm_type,
+    llm_endpoint,
+    llm_key,
+    organization,
+    namespace,
+    mcp_server,
+    city,
+    config,
+    shared_secret,
 ):
     if llm_type == "azure":
         kwargs = {
@@ -48,7 +56,11 @@ async def amain(
 
     # Create SLIM app
     client_name = slim_bindings.Name("org", "ns", "time-agent")
-    client_app, connection_id = await create_local_app(client_name, config)
+    client_app, connection_id = await create_local_app(
+        client_name,
+        config,
+        shared_secret=shared_secret,
+    )
 
     logger.info("SLIM App created")
 
@@ -102,6 +114,11 @@ async def amain(
     type=ClientConfigType(),
     help="slim server configuration",
 )
+@click.option(
+    "--shared-secret",
+    default=None,
+    help="shared secret for authentication",
+)
 def main(
     llm_type,
     llm_endpoint,
@@ -111,6 +128,7 @@ def main(
     mcp_server_name,
     city,
     config,
+    shared_secret,
 ):
     try:
         asyncio.run(
@@ -123,6 +141,7 @@ def main(
                 mcp_server_name,
                 city,
                 config,
+                shared_secret,
             )
         )
     except KeyboardInterrupt:
