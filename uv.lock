@@ -2155,17 +2155,17 @@ wheels = [
 
 [[package]]
 name = "slim-bindings"
-version = "1.2.0"
+version = "1.4.1"
 source = { registry = "https://pypi.org/simple" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/22/82/0652ffa465de454b968ed1f0fd2a09e9ac866b36d87dbfe4cd2c617603f4/slim_bindings-1.2.0-py3-none-macosx_10_12_x86_64.whl", hash = "sha256:885102d3ca23585ce49896b0db516123b333d1b88f44bd083d91f5534e8b0ef3", size = 14522134, upload-time = "2026-02-27T18:53:26.115Z" },
-    { url = "https://files.pythonhosted.org/packages/5e/48/b2a7b88bba70f1dccfc762d4daabc08785c41c1632137fab29d64b27b2be/slim_bindings-1.2.0-py3-none-macosx_11_0_arm64.whl", hash = "sha256:ae1c173e6918e8601801771f78163fc9b6f3824eda56cfeec22ee0f74776408d", size = 14240628, upload-time = "2026-02-27T18:53:28.881Z" },
-    { url = "https://files.pythonhosted.org/packages/e2/ad/fbbaea798fbc0926d68d6eb5d6fcc3fc01199efa99182e4f11e38d2a37ff/slim_bindings-1.2.0-py3-none-manylinux_2_28_aarch64.whl", hash = "sha256:9a5932c756d1672fc3f7db3d81c22d7db575d75c006949aaba538cc7a8cfb8b4", size = 12781899, upload-time = "2026-02-27T18:53:32.207Z" },
-    { url = "https://files.pythonhosted.org/packages/c2/f6/a4c2f3a809146635d21752a56aad656e7bbd05256266017f99cbb4818d67/slim_bindings-1.2.0-py3-none-manylinux_2_28_x86_64.whl", hash = "sha256:e3963cdd5580ac04a0a1acb2bf4ab5926af7a0fa1fadbd8b531b8a14e6545922", size = 13277783, upload-time = "2026-02-27T18:53:34.301Z" },
-    { url = "https://files.pythonhosted.org/packages/96/e2/c00d4ff0da64d43b1cdd995bbbfd48bcabbe27b33688b13941b14f70d0b5/slim_bindings-1.2.0-py3-none-musllinux_1_2_aarch64.whl", hash = "sha256:25fd38017bdcd0de65a03976dd2bcf8b0c54f7ed5ff0b9fe2f84b0078500dded", size = 12785081, upload-time = "2026-02-27T18:53:36.335Z" },
-    { url = "https://files.pythonhosted.org/packages/8c/6a/c58247afbaaf7057c9143c6170eb08111a05996337b4c51edb507cc5101a/slim_bindings-1.2.0-py3-none-musllinux_1_2_x86_64.whl", hash = "sha256:74470934fca9278dfffbc979dee833d29335a6d74e89310c0eafcebe08038381", size = 13272688, upload-time = "2026-02-27T18:53:38.321Z" },
-    { url = "https://files.pythonhosted.org/packages/06/92/baf8ee49db646f336914f1ecd9415f965402f4aa357bd228319a06581405/slim_bindings-1.2.0-py3-none-win_amd64.whl", hash = "sha256:1255250e8db8b3838d0ce940350f9202c4545f9175208366993cfae2f5a0221c", size = 12036097, upload-time = "2026-02-27T18:53:40.444Z" },
-    { url = "https://files.pythonhosted.org/packages/3a/6b/03eaf28c9bb1578d02fceb65ddccf7884049cb010d865f58c8ae2c43f821/slim_bindings-1.2.0-py3-none-win_arm64.whl", hash = "sha256:8abb184c1d054a1c5fbd587e44d70c2dee13c69c71b9992d58915ca6e704a581", size = 11284386, upload-time = "2026-02-27T18:53:42.738Z" },
+    { url = "https://files.pythonhosted.org/packages/ec/10/f781f076ced49a5dbd4a5eb04b1948fcd82fcd0948c2b80ecbe5c94f8ec8/slim_bindings-1.4.1-py3-none-macosx_10_12_x86_64.whl", hash = "sha256:44e985aae7203d4b9173b0a824a26a8bea39a02e203ad89e0e1abec7d3b86ef5", size = 12398410, upload-time = "2026-05-23T08:57:12.545Z" },
+    { url = "https://files.pythonhosted.org/packages/7b/11/a30899045e56b12b595683e4de194210246f6e6b95185ff520cf3d99d2be/slim_bindings-1.4.1-py3-none-macosx_11_0_arm64.whl", hash = "sha256:5667a87549c4d1bf6decef34acbd8b2920b8d35451200dcf2cd55f2fb7cbc929", size = 12105663, upload-time = "2026-05-23T08:57:16.134Z" },
+    { url = "https://files.pythonhosted.org/packages/04/80/398d41159ddfa4dabd9102b23888e3bfc85a9a439403aa95814ba6de7cab/slim_bindings-1.4.1-py3-none-manylinux_2_28_aarch64.whl", hash = "sha256:2327211828e59a0c7dc970b1210abdd4f32cc1dd3c41a68ab1e5d52f16e34664", size = 12600843, upload-time = "2026-05-23T08:57:19.022Z" },
+    { url = "https://files.pythonhosted.org/packages/c1/d3/34630486515e6236d1887aa8f49a845b1bb6b844e0773d00d5e9daa9c540/slim_bindings-1.4.1-py3-none-manylinux_2_28_x86_64.whl", hash = "sha256:42036cb27c7165beb7a68010aceec6a514f0de0bef164711585281d5ad0f57d1", size = 13041099, upload-time = "2026-05-23T08:57:21.717Z" },
+    { url = "https://files.pythonhosted.org/packages/bc/ec/1ad484dcfb0f9edd87015832a4dc3eb2638a71fb3a38646b9611cee4fc35/slim_bindings-1.4.1-py3-none-musllinux_1_2_aarch64.whl", hash = "sha256:d96b59c0108a588c55e5335a9feee74bc9b78e468a5cd4dd038e78020ce85b17", size = 12598901, upload-time = "2026-05-23T08:57:24.096Z" },
+    { url = "https://files.pythonhosted.org/packages/80/54/3c615508b65fe34d67368d67e8321becec6bc566888e261ae45fb98afa74/slim_bindings-1.4.1-py3-none-musllinux_1_2_x86_64.whl", hash = "sha256:618137b056627326fa55f5eeae99e800b476f1951460d5ccf58a7a0b38ef16df", size = 13031199, upload-time = "2026-05-23T08:57:26.305Z" },
+    { url = "https://files.pythonhosted.org/packages/77/41/87d47c1fd47a1681b6377419e941ba22e416490a08577242b4da1d5a89ed/slim_bindings-1.4.1-py3-none-win_amd64.whl", hash = "sha256:9c89dbdbee2ffcb92b4ffe72593556b5cc14b24226a7f617838897e44bd1f897", size = 11650639, upload-time = "2026-05-23T08:57:28.92Z" },
+    { url = "https://files.pythonhosted.org/packages/3b/38/f6425ceb8ecbae63c17bd08af5321d399b51b459b967d7625be6375c56f8/slim_bindings-1.4.1-py3-none-win_arm64.whl", hash = "sha256:dee180e534d4b10c912190aa143dea03f2cb996f5ed58036c5257f6f028feaab", size = 10929753, upload-time = "2026-05-23T08:57:31.067Z" },
 ]
 
 [[package]]
@@ -2201,7 +2201,7 @@ testing = [
 requires-dist = [
     { name = "anyio", specifier = ">=4.5" },
     { name = "mcp", specifier = "==1.26.0" },
-    { name = "slim-bindings", specifier = "~=1.0" },
+    { name = "slim-bindings", specifier = "~=1.4" },
 ]
 
 [package.metadata.requires-dev]
