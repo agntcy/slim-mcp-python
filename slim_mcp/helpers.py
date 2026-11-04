@@ -5,6 +5,8 @@
 Core helper functions for creating SLIM apps and services.
 """
 
+import asyncio
+import asyncio.base_events
 import logging
 
 import slim_bindings
@@ -121,6 +123,9 @@ async def create_local_app(
         )
 
     service = setup_service(enable_opentelemetry=enable_opentelemetry)
+    loop = asyncio.get_running_loop()
+    assert isinstance(loop, asyncio.base_events.BaseEventLoop)
+    slim_bindings.uniffi_set_event_loop(loop)
 
     connection_id = None
     # Connect service to upstream server if config provided

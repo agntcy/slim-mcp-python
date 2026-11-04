@@ -12,7 +12,7 @@ import logging
 from contextlib import asynccontextmanager
 
 import slim_bindings
-import mcp.types as types
+import mcp_types
 from mcp.shared.message import SessionMessage
 from anyio.streams.memory import MemoryObjectReceiveStream, MemoryObjectSendStream
 import anyio
@@ -44,7 +44,7 @@ async def create_slim_session(
     session_with_completion = await slim_app.create_session_async(
         config=slim_bindings.SessionConfig(
             session_type=slim_bindings.SessionType.POINT_TO_POINT,
-            enable_mls=False,
+            mls_settings=None,
             max_retries=max_retries,
             interval=timeout,
             metadata={},
@@ -101,8 +101,8 @@ async def create_mcp_streams(session: slim_bindings.Session):
                         extra={"payload": received_msg.payload.decode()},
                     )
 
-                    message = types.JSONRPCMessage.model_validate_json(
-                        received_msg.payload.decode()
+                    message = mcp_types.jsonrpc_message_adapter.validate_json(
+                        received_msg.payload
                     )
                     session_message = SessionMessage(message=message)
                     await read_stream_writer.send(session_message)
