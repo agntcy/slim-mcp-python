@@ -30,13 +30,8 @@ from mcp.server.lowlevel import Server
 import mcp.types as types
 from slim_mcp import create_local_app, run_mcp_server
 
-# Create an MCP server application
-mcp_app = Server("example-server")
-
-# Define your tools
-@mcp_app.list_tools()
-async def list_tools() -> list[types.Tool]:
-    return [
+async def list_tools(ctx, params) -> types.ListToolsResult:
+    return types.ListToolsResult(tools=[
         types.Tool(
             name="example",
             description="An example tool",
@@ -48,7 +43,10 @@ async def list_tools() -> list[types.Tool]:
                 },
             },
         )
-    ]
+    ])
+
+# Create an MCP server application with handlers
+mcp_app = Server("example-server", on_list_tools=list_tools)
 
 async def main():
     # Create SLIM app
@@ -181,12 +179,10 @@ from mcp.server.lowlevel import Server
 import slim_bindings
 from slim_mcp import create_local_app, run_mcp_server
 
-mcp_app = Server("my-server")
+async def list_tools(ctx, params):
+    return types.ListToolsResult(tools=[...])
 
-# Define tools...
-@mcp_app.list_tools()
-async def list_tools():
-    return [...]
+mcp_app = Server("my-server", on_list_tools=list_tools)
 
 # Create and run
 name = slim_bindings.Name("org", "ns", "my-server")
