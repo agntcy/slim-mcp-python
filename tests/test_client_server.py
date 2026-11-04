@@ -30,7 +30,7 @@ def example_tool() -> types.Tool:
     return types.Tool(
         name="example",
         description="The most exemplar tool of the tools",
-        inputSchema={
+        input_schema={
             "type": "object",
             "required": ["url"],
             "properties": {

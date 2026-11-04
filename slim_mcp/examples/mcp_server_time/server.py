@@ -76,12 +76,7 @@ def get_local_tz(local_tz_override: str | None = None) -> ZoneInfo:
     tzinfo = datetime.now().astimezone(tz=None).tzinfo
     if tzinfo is not None:
         return ZoneInfo(str(tzinfo))
-    raise McpError(
-        types.ErrorData(
-            code=types.INTERNAL_ERROR,
-            message="Could not determine local timezone - tzinfo is None",
-        )
-    )
+    raise McpError(types.INTERNAL_ERROR, "Could not determine local timezone - tzinfo is None")
 
 
 def get_zoneinfo(timezone_name: str) -> ZoneInfo:
@@ -100,12 +95,7 @@ def get_zoneinfo(timezone_name: str) -> ZoneInfo:
     try:
         return ZoneInfo(timezone_name)
     except Exception as e:
-        raise McpError(
-            types.ErrorData(
-                code=types.INTERNAL_ERROR,
-                message=f"Invalid timezone: {str(e)}",
-            )
-        )
+        raise McpError(types.INTERNAL_ERROR, f"Invalid timezone: {str(e)}")
 
 
 class TimeServer:
@@ -219,7 +209,7 @@ class TimeServerApp:
             types.Tool(
                 name=TimeTools.GET_CURRENT_TIME.value,
                 description="Get current time in a specific timezones",
-                inputSchema={
+                input_schema={
                     "type": "object",
                     "properties": {
                         "timezone": {
@@ -233,7 +223,7 @@ class TimeServerApp:
             types.Tool(
                 name=TimeTools.CONVERT_TIME.value,
                 description="Convert time between timezones",
-                inputSchema={
+                input_schema={
                     "type": "object",
                     "properties": {
                         "source_timezone": {
