@@ -8,7 +8,6 @@ This module provides tools for getting current time in different timezones and c
 
 import json
 import logging
-from collections.abc import Sequence
 from datetime import datetime, timedelta
 from enum import Enum
 from zoneinfo import ZoneInfo
@@ -17,7 +16,7 @@ import click
 import slim_bindings
 from mcp import types
 from mcp.server.lowlevel import Server
-from mcp.shared.exceptions import McpError
+from mcp.shared.exceptions import MCPError as McpError
 from pydantic import BaseModel
 
 from slim_mcp import create_local_app, run_mcp_server
@@ -207,111 +206,89 @@ class TimeServerApp:
         Args:
             local_timezone: Optional override for local timezone
         """
-        self.app: Server = Server("mcp-time")
         self.time_server = TimeServer()
         self.local_tz = str(get_local_tz(local_timezone))
-        self._setup_tools()
+        self.app: Server = Server(
+            "mcp-time",
+            on_list_tools=self._list_tools,
+            on_call_tool=self._call_tool,
+        )
 
-    def _setup_tools(self):
-        """Setup tool definitions and handlers for the MCP server."""
-
-        @self.app.list_tools()
-        async def list_tools() -> list[types.Tool]:
-            """
-            List available time tools.
-
-            Returns:
-                list[types.Tool]: List of available time-related tools
-            """
-            return [
-                types.Tool(
-                    name=TimeTools.GET_CURRENT_TIME.value,
-                    description="Get current time in a specific timezones",
-                    inputSchema={
-                        "type": "object",
-                        "properties": {
-                            "timezone": {
-                                "type": "string",
-                                "description": f"IANA timezone name (e.g., 'America/New_York', 'Europe/London'). Use '{self.local_tz}' as local timezone if no timezone provided by the user.",
-                            }
-                        },
-                        "required": ["timezone"],
+    async def _list_tools(self, ctx, params) -> types.ListToolsResult:
+        return types.ListToolsResult(tools=[
+            types.Tool(
+                name=TimeTools.GET_CURRENT_TIME.value,
+                description="Get current time in a specific timezones",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "timezone": {
+                            "type": "string",
+                            "description": f"IANA timezone name (e.g., 'America/New_York', 'Europe/London'). Use '{self.local_tz}' as local timezone if no timezone provided by the user.",
+                        }
                     },
-                ),
-                types.Tool(
-                    name=TimeTools.CONVERT_TIME.value,
-                    description="Convert time between timezones",
-                    inputSchema={
-                        "type": "object",
-                        "properties": {
-                            "source_timezone": {
-                                "type": "string",
-                                "description": f"Source IANA timezone name (e.g., 'America/New_York', 'Europe/London'). Use '{self.local_tz}' as local timezone if no source timezone provided by the user.",
-                            },
-                            "time": {
-                                "type": "string",
-                                "description": "Time to convert in 24-hour format (HH:MM)",
-                            },
-                            "target_timezone": {
-                                "type": "string",
-                                "description": f"Target IANA timezone name (e.g., 'Asia/Tokyo', 'America/San_Francisco'). Use '{self.local_tz}' as local timezone if no target timezone provided by the user.",
-                            },
+                    "required": ["timezone"],
+                },
+            ),
+            types.Tool(
+                name=TimeTools.CONVERT_TIME.value,
+                description="Convert time between timezones",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "source_timezone": {
+                            "type": "string",
+                            "description": f"Source IANA timezone name (e.g., 'America/New_York', 'Europe/London'). Use '{self.local_tz}' as local timezone if no source timezone provided by the user.",
                         },
-                        "required": ["source_timezone", "time", "target_timezone"],
+                        "time": {
+                            "type": "string",
+                            "description": "Time to convert in 24-hour format (HH:MM)",
+                        },
+                        "target_timezone": {
+                            "type": "string",
+                            "description": f"Target IANA timezone name (e.g., 'Asia/Tokyo', 'America/San_Francisco'). Use '{self.local_tz}' as local timezone if no target timezone provided by the user.",
+                        },
                     },
-                ),
-            ]
+                    "required": ["source_timezone", "time", "target_timezone"],
+                },
+            ),
+        ])
 
-        @self.app.call_tool()
-        async def call_tool(
-            name: str, arguments: dict
-        ) -> Sequence[types.TextContent | types.ImageContent | types.EmbeddedResource]:
-            """
-            Handle tool calls for time queries.
+    async def _call_tool(self, ctx, params: types.CallToolRequestParams) -> types.CallToolResult:
+        name = params.name
+        arguments = params.arguments or {}
+        result: TimeResult | TimeConversionResult
 
-            Args:
-                name: Name of the tool to call
-                arguments: Dictionary of tool arguments
+        try:
+            match name:
+                case TimeTools.GET_CURRENT_TIME.value:
+                    timezone = arguments.get("timezone")
+                    if not timezone:
+                        raise ValueError("Missing required argument: timezone")
+                    result = self.time_server.get_current_time(timezone)
 
-            Returns:
-                Sequence of content types containing the tool response
-
-            Raises:
-                ValueError: If tool name is unknown or arguments are invalid
-            """
-
-            result: TimeResult | TimeConversionResult
-
-            try:
-                match name:
-                    case TimeTools.GET_CURRENT_TIME.value:
-                        timezone = arguments.get("timezone")
-                        if not timezone:
-                            raise ValueError("Missing required argument: timezone")
-                        result = self.time_server.get_current_time(timezone)
-
-                    case TimeTools.CONVERT_TIME.value:
-                        if not all(
-                            k in arguments
-                            for k in ["source_timezone", "time", "target_timezone"]
-                        ):
-                            raise ValueError("Missing required arguments")
-                        result = self.time_server.convert_time(
-                            arguments["source_timezone"],
-                            arguments["time"],
-                            arguments["target_timezone"],
-                        )
-                    case _:
-                        raise ValueError(f"Unknown tool: {name}")
-
-                return [
-                    types.TextContent(
-                        type="text", text=json.dumps(result.model_dump(), indent=2)
+                case TimeTools.CONVERT_TIME.value:
+                    if not all(
+                        k in arguments
+                        for k in ["source_timezone", "time", "target_timezone"]
+                    ):
+                        raise ValueError("Missing required arguments")
+                    result = self.time_server.convert_time(
+                        arguments["source_timezone"],
+                        arguments["time"],
+                        arguments["target_timezone"],
                     )
-                ]
+                case _:
+                    raise ValueError(f"Unknown tool: {name}")
 
-            except Exception as e:
-                raise ValueError(f"Error processing mcp-server-time query: {str(e)}")
+            return types.CallToolResult(content=[
+                types.TextContent(
+                    type="text", text=json.dumps(result.model_dump(), indent=2)
+                )
+            ])
+
+        except Exception as e:
+            raise ValueError(f"Error processing mcp-server-time query: {str(e)}")
 
 
 async def serve_slim(

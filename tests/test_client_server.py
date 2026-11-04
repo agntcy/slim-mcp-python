@@ -46,13 +46,11 @@ def example_tool() -> types.Tool:
 @pytest.fixture
 def mcp_app(example_tool: types.Tool) -> Server:
     """Create and configure an MCP server application."""
-    app: Server = Server("example-server")
 
-    @app.list_tools()
-    async def list_tools() -> list[types.Tool]:
-        return [example_tool]
+    async def list_tools(ctx, params) -> types.ListToolsResult:
+        return types.ListToolsResult(tools=[example_tool])
 
-    return app
+    return Server("example-server", on_list_tools=list_tools)
 
 
 @pytest.mark.asyncio
