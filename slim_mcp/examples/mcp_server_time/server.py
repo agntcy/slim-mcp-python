@@ -76,7 +76,9 @@ def get_local_tz(local_tz_override: str | None = None) -> ZoneInfo:
     tzinfo = datetime.now().astimezone(tz=None).tzinfo
     if tzinfo is not None:
         return ZoneInfo(str(tzinfo))
-    raise McpError(types.INTERNAL_ERROR, "Could not determine local timezone - tzinfo is None")
+    raise McpError(
+        types.INTERNAL_ERROR, "Could not determine local timezone - tzinfo is None"
+    )
 
 
 def get_zoneinfo(timezone_name: str) -> ZoneInfo:
@@ -205,46 +207,50 @@ class TimeServerApp:
         )
 
     async def _list_tools(self, ctx, params) -> types.ListToolsResult:
-        return types.ListToolsResult(tools=[
-            types.Tool(
-                name=TimeTools.GET_CURRENT_TIME.value,
-                description="Get current time in a specific timezones",
-                input_schema={
-                    "type": "object",
-                    "properties": {
-                        "timezone": {
-                            "type": "string",
-                            "description": f"IANA timezone name (e.g., 'America/New_York', 'Europe/London'). Use '{self.local_tz}' as local timezone if no timezone provided by the user.",
-                        }
+        return types.ListToolsResult(
+            tools=[
+                types.Tool(
+                    name=TimeTools.GET_CURRENT_TIME.value,
+                    description="Get current time in a specific timezones",
+                    input_schema={
+                        "type": "object",
+                        "properties": {
+                            "timezone": {
+                                "type": "string",
+                                "description": f"IANA timezone name (e.g., 'America/New_York', 'Europe/London'). Use '{self.local_tz}' as local timezone if no timezone provided by the user.",
+                            }
+                        },
+                        "required": ["timezone"],
                     },
-                    "required": ["timezone"],
-                },
-            ),
-            types.Tool(
-                name=TimeTools.CONVERT_TIME.value,
-                description="Convert time between timezones",
-                input_schema={
-                    "type": "object",
-                    "properties": {
-                        "source_timezone": {
-                            "type": "string",
-                            "description": f"Source IANA timezone name (e.g., 'America/New_York', 'Europe/London'). Use '{self.local_tz}' as local timezone if no source timezone provided by the user.",
+                ),
+                types.Tool(
+                    name=TimeTools.CONVERT_TIME.value,
+                    description="Convert time between timezones",
+                    input_schema={
+                        "type": "object",
+                        "properties": {
+                            "source_timezone": {
+                                "type": "string",
+                                "description": f"Source IANA timezone name (e.g., 'America/New_York', 'Europe/London'). Use '{self.local_tz}' as local timezone if no source timezone provided by the user.",
+                            },
+                            "time": {
+                                "type": "string",
+                                "description": "Time to convert in 24-hour format (HH:MM)",
+                            },
+                            "target_timezone": {
+                                "type": "string",
+                                "description": f"Target IANA timezone name (e.g., 'Asia/Tokyo', 'America/San_Francisco'). Use '{self.local_tz}' as local timezone if no target timezone provided by the user.",
+                            },
                         },
-                        "time": {
-                            "type": "string",
-                            "description": "Time to convert in 24-hour format (HH:MM)",
-                        },
-                        "target_timezone": {
-                            "type": "string",
-                            "description": f"Target IANA timezone name (e.g., 'Asia/Tokyo', 'America/San_Francisco'). Use '{self.local_tz}' as local timezone if no target timezone provided by the user.",
-                        },
+                        "required": ["source_timezone", "time", "target_timezone"],
                     },
-                    "required": ["source_timezone", "time", "target_timezone"],
-                },
-            ),
-        ])
+                ),
+            ]
+        )
 
-    async def _call_tool(self, ctx, params: types.CallToolRequestParams) -> types.CallToolResult:
+    async def _call_tool(
+        self, ctx, params: types.CallToolRequestParams
+    ) -> types.CallToolResult:
         name = params.name
         arguments = params.arguments or {}
         result: TimeResult | TimeConversionResult
@@ -271,11 +277,13 @@ class TimeServerApp:
                 case _:
                     raise ValueError(f"Unknown tool: {name}")
 
-            return types.CallToolResult(content=[
-                types.TextContent(
-                    type="text", text=json.dumps(result.model_dump(), indent=2)
-                )
-            ])
+            return types.CallToolResult(
+                content=[
+                    types.TextContent(
+                        type="text", text=json.dumps(result.model_dump(), indent=2)
+                    )
+                ]
+            )
 
         except Exception as e:
             raise ValueError(f"Error processing mcp-server-time query: {str(e)}")
