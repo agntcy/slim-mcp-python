@@ -33,25 +33,8 @@ async def amain(
     city,
     config,
     shared_secret,
+    no_llm,
 ):
-    if llm_type == "azure":
-        kwargs = {
-            "engine": "gpt-4o-mini",
-            "model": "gpt-4o-mini",
-            "is_chat_model": True,
-            "azure_endpoint": llm_endpoint,
-            "api_key": llm_key,
-            "api_version": "2024-08-01-preview",
-        }
-        llm = AzureOpenAI(**kwargs)
-    elif llm_type == "ollama":
-        kwargs = {
-            "model": "llama3.2",
-        }
-        llm = Ollama(**kwargs)
-    else:
-        raise Exception("LLM type must be azure or ollama")
-
     logger.info("Starting SLIM client")
 
     # Create SLIM app
@@ -75,23 +58,38 @@ async def amain(
     async with create_client_streams(client_app, destination) as (read, write):
         logger.info("Creating MCP client session")
         async with ClientSession(read, write) as mcp_session:
-            logger.info("Creating MCP tool spec")
-
             await mcp_session.initialize()
 
-            mcp_tool_spec = McpToolSpec(
-                client=mcp_session,
-            )
+            if no_llm:
+                # Call get_current_time tool directly without an LLM
+                result = await mcp_session.call_tool(
+                    "get_current_time", {"timezone": "America/New_York"}
+                )
+                print(f"Tool result: {result}")
+                return
 
+            if llm_type == "azure":
+                llm = AzureOpenAI(
+                    engine="gpt-4o-mini",
+                    model="gpt-4o-mini",
+                    is_chat_model=True,
+                    azure_endpoint=llm_endpoint,
+                    api_key=llm_key,
+                    api_version="2024-08-01-preview",
+                )
+            elif llm_type == "ollama":
+                llm = Ollama(model="llama3.2")
+            else:
+                raise Exception("LLM type must be azure or ollama")
+
+            mcp_tool_spec = McpToolSpec(client=mcp_session)
             tools = await mcp_tool_spec.to_tool_list_async()
             print(tools)
 
             agent = ReActAgent(llm=llm, tools=tools)
-
             response = await agent.run(
                 user_msg=f"What is the current time in {city}?",
             )
-
             print(response)
 
 
@@ -119,6 +117,12 @@ async def amain(
     default=None,
     help="shared secret for authentication",
 )
+@click.option(
+    "--no-llm",
+    is_flag=True,
+    default=False,
+    help="call get_current_time tool directly without an LLM",
+)
 def main(
     llm_type,
     llm_endpoint,
@@ -129,6 +133,7 @@ def main(
     city,
     config,
     shared_secret,
+    no_llm,
 ):
     try:
         asyncio.run(
@@ -142,6 +147,7 @@ def main(
                 city,
                 config,
                 shared_secret,
+                no_llm,
             )
         )
     except KeyboardInterrupt:
